@@ -7,7 +7,8 @@
 # MIT License
 # (c) 2012, Nikita Volkov. All rights reserved.
 # http://github.com/nikita-volkov/install-to-project-repo
-# 
+#
+# Modified by Jose-Juan Pedreno-Manresa 
 
 
 import os
@@ -39,6 +40,15 @@ def parse_by_eclipse_standard(path):
       "snapshot": snapshot,
       "source": source
     }
+	
+  else:
+    return {
+      "group": "local",
+      "name": file,
+      "version": "1.0",
+      "snapshot": "",
+      "source": ""
+  }
 
 def maven_dependencies(parsing_results):
   def artifact(parsing):
@@ -48,13 +58,23 @@ def maven_dependencies(parsing_results):
       "version": parsing["version"] + ("-SNAPSHOT" if parsing["snapshot"] else "")
     }
   def maven_dependency(artifact):
-    return """
-<dependency>
-  <groupId>%(groupId)s</groupId>
-  <artifactId>%(artifactId)s</artifactId>
-  <version>%(version)s</version>
-</dependency>
-""" % artifact
+    if options.provided:
+	  return """
+        <dependency>
+          <groupId>%(groupId)s</groupId>
+          <artifactId>%(artifactId)s</artifactId>
+          <version>%(version)s</version>
+	      <scope>provided</scope>
+        </dependency>
+      """ % artifact	
+    else:
+	  return """
+        <dependency>
+          <groupId>%(groupId)s</groupId>
+          <artifactId>%(artifactId)s</artifactId>
+          <version>%(version)s</version>
+        </dependency>
+      """ % artifact
   def unique_artifacts():
     artifacts = []
     for (_, parsing) in parsing_results:
@@ -203,6 +223,9 @@ parser.add_option("-i", "--interactive",
 parser.add_option("-d", "--delete", 
                   dest="delete", action="store_true", default=False, 
                   help="Delete successfully installed libs in source location")
+parser.add_option("-p", "--provided", 
+                  dest="provided", action="store_true", default=False, 
+                  help="Dependencies scopes in output is listed as \"provided\"")				  
 (options, args) = parser.parse_args()
 
 
@@ -227,3 +250,6 @@ for (path, parsing) in parsings:
     os.remove(path)
 
 print maven_dependencies(parsings)
+print "These dependenceis have also been saved in the file : repo/dependencies.txt"
+f = open('repo/dependencies.txt', 'w')
+f.write(maven_dependencies(parsings))
